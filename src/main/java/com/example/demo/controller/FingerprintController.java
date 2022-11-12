@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -43,7 +44,7 @@ public class FingerprintController {
 
     public static final String PATH_FILE_DOWNLOAD = "C:\\Users\\Bong\\OneDrive\\Desktop\\CODE\\BONG\\PTHTTM\\demo\\demo\\Files-Upload\\";
 
-    public static final String PATH_FILE_IMAGES = "C:\\Users\\Bong\\OneDrive\\Desktop\\CODE\\BONG\\PTHTTM\\demo\\demo\\";
+    public static final String PATH_FILE_IMAGES = "C:\\Users\\Bong\\OneDrive\\Desktop\\CODE\\BONG\\PTHTTM\\demo\\demo";
     public static final double RATIO = 0.5;
 
     private final StudentRepository studentRepository;
@@ -56,26 +57,37 @@ public class FingerprintController {
         this.fingerRepository = fingerRepository;
     }
 
-    @PostMapping("/finger")
-    public ResponseEntity<?> checkFinger(@RequestParam("linkImage") MultipartFile file) throws IOException {
-
+    @PostMapping(value = "/finger", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> checkFinger(@RequestParam(value = "file") MultipartFile file) throws IOException {
+        LOGGER.info("{}", file.getName());
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
         String fileCode = saveFile(fileName, file);
 
         Resource resource = getFileAsResource(fileCode);
 
-        List<Student> students = (List<Student>) studentRepository.findAll();
-        for(Student student : students){
-            List<Finger> fingers = (List<Finger>) fingerRepository.findByidStudent(student.getId());
-            for(Finger finger : fingers){
-                boolean check = compareImages( PATH_FILE_DOWNLOAD + resource.getFilename() , PATH_FILE_IMAGES + finger.getFilePath() + "\\" + finger.getName());
-                if(check == true){
-                    return new ResponseEntity<>(new ResponseMessage(student.getName() , true), HttpStatus.OK);
-                }
+        List<Finger> fingers = (List<Finger>) fingerRepository.findAll();
+
+        for(Finger finger : fingers){
+            boolean check = compareImages( PATH_FILE_DOWNLOAD + resource.getFilename() , PATH_FILE_IMAGES + finger.getFilePath() + "\\" + finger.getName());
+            if(check){
+                LOGGER.info(PATH_FILE_DOWNLOAD + resource.getFilename());
+                LOGGER.info(PATH_FILE_IMAGES + finger.getFilePath() + "\\" + finger.getName());
+                Student student = studentRepository.findById(Integer.valueOf(finger.getStudentCode()));
+                return new ResponseEntity<>(new ResponseMessage(student.getStudentCode(), student.getName() , true), HttpStatus.OK);
             }
         }
+//        List<Student> students = (List<Student>) studentRepository.findAll();
+//        for(Student student : students){
+//            List<Finger> fingers = (List<Finger>) fingerRepository.findByidStudent(student.getId());
+//            for(Finger finger : fingers){
+//                boolean check = compareImages( PATH_FILE_DOWNLOAD + resource.getFilename() , PATH_FILE_IMAGES + finger.getFilePath() + "\\" + finger.getName());
+//                if(check == true){
+//                    return new ResponseEntity<>(new ResponseMessage(student.getStudentCode(), student.getName() , true), HttpStatus.OK);
+//                }
+//            }
+//        }
 
-        return new ResponseEntity<>(new ResponseMessage(null , false), HttpStatus.OK);
+        return new ResponseEntity<>(new ResponseMessage("Khong ton tai","Khong ton tai" , false), HttpStatus.OK);
     }
     private Path foundFile = null;
     public Resource getFileAsResource(String fileCode) throws IOException {
@@ -132,12 +144,8 @@ public class FingerprintController {
         }
 
         if((float)distance.size() / keypoints1.total() * 100 > RATIO){
-//            float check = (float)distance.size() / keypoints1.total() * 100 ;
-//            System.out.println(check);
             return true;
         }else {
-//			float check = (float)distance.size() / keypoints1.total() * 100;
-//			System.out.println(check);
             return false;
         }
     }

@@ -2,11 +2,15 @@ package com.example.demo.repository;
 
 
 import com.example.demo.model.Finger;
+import com.example.demo.model.Student;
+
+import java.util.List;
 
 public interface FingerRepository {
-	Finger findFingerID(int id);
-	Iterable<Finger>findByName(String name,int studentid);
-	Iterable<Finger>findByidStudent(int studentid);
-	Finger saveFinger(Finger finger);
+	List<Finger> findByidStudent(int studentid);
+	Finger saveFinger(Finger finger,int studentid);
 	void delete(int id);
+
+	Iterable <Finger>findAll();
 }
+

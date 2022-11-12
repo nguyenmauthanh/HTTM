@@ -10,6 +10,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ResponseMessage implements Serializable {
+    private String code;
     private String userName;
     private boolean exist;
 }
