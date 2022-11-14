@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import Decoder.BASE64Decoder;
+import com.example.demo.dto.FileDTO;
 import com.example.demo.dto.ResponseMessage;
 import com.example.demo.model.Finger;
 import com.example.demo.model.Student;
@@ -26,6 +28,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -57,7 +63,7 @@ public class FingerprintController {
         this.fingerRepository = fingerRepository;
     }
 
-    @PostMapping(value = "/finger", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequestMapping(value = "/finger", method = RequestMethod.POST, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> checkFinger(@RequestParam(value = "file") MultipartFile file) throws IOException {
         LOGGER.info("{}", file.getName());
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
@@ -173,5 +179,33 @@ public class FingerprintController {
         }
 
         return fileCode;
+    }
+
+    @PostMapping(value = "/fingers", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> checkFingers(@RequestBody FileDTO file){
+        BufferedImage image = null;
+        byte[] imageByte;
+        try {
+            BASE64Decoder decoder = new BASE64Decoder();
+            imageByte = decoder.decodeBuffer(file.getFile());
+            ByteArrayInputStream bis = new ByteArrayInputStream(imageByte);
+            File outputfile = new File("./Files-Upload/image.jpg");
+            image = ImageIO.read(bis);
+            ImageIO.write(image, "jpg", outputfile);
+
+            List<Finger> fingers = (List<Finger>) fingerRepository.findAll();
+            for(Finger finger : fingers){
+                boolean check = compareImages( PATH_FILE_DOWNLOAD + outputfile.getName() , PATH_FILE_IMAGES + finger.getFilePath() + "\\" + finger.getName());
+                if(check){
+                    Student student = studentRepository.findById(Integer.valueOf(finger.getStudentCode()));
+                    return new ResponseEntity<>(new ResponseMessage(student.getStudentCode(), student.getName() , true), HttpStatus.OK);
+                }
+            }
+
+            bis.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ResponseEntity<>(new ResponseMessage("Khong ton tai","Khong ton tai" , false), HttpStatus.OK);
     }
 }
